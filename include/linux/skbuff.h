@@ -34,6 +34,9 @@
 #include <linux/sched.h>
 #include <net/flow_keys.h>
 
+/* roy: for traffic control module */
+#include <linux/nos_skb.h>
+
 /* A. Checksumming of received packets by device.
  *
  * CHECKSUM_NONE:
@@ -656,6 +659,9 @@ struct sk_buff {
 				*data;
 	unsigned int		truesize;
 	atomic_t		users;
+
+	/* roy: nos traffic control */
+	struct nos_skb_info nos;
 };
 
 #ifdef __KERNEL__

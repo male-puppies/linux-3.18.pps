@@ -18,6 +18,8 @@
 #include <linux/compiler.h>
 #include <linux/atomic.h>
 
+#include <linux/nos_track.h>
+
 #include <linux/netfilter/nf_conntrack_tcp.h>
 #include <linux/netfilter/nf_conntrack_dccp.h>
 #include <linux/netfilter/nf_conntrack_sctp.h>
@@ -111,6 +113,9 @@ struct nf_conn {
 #ifdef CONFIG_NET_NS
 	struct net *ct_net;
 #endif
+
+	/* nos track node private */
+	struct nos_track nos_track;
 
 	/* Storage reserved for other modules, must be the last member */
 	union nf_conntrack_proto proto;
@@ -290,6 +295,17 @@ extern unsigned int nf_conntrack_htable_size;
 extern unsigned int nf_conntrack_max;
 extern unsigned int nf_conntrack_hash_rnd;
 void init_nf_conntrack_hash_rnd(void);
+
+enum {
+	UGW_NET_MODE_ROUTER = 0,
+	UGW_NET_MODE_BRIDGE,
+};
+
+extern unsigned int nf_conntrack_mode;
+static inline unsigned int nf_ct_net_mode(void)
+{
+	return nf_conntrack_mode;
+}
 
 void nf_conntrack_tmpl_insert(struct net *net, struct nf_conn *tmpl);
 

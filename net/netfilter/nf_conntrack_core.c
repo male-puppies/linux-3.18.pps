@@ -120,6 +120,9 @@ EXPORT_SYMBOL_GPL(nf_conntrack_htable_size);
 unsigned int nf_conntrack_max __read_mostly;
 EXPORT_SYMBOL_GPL(nf_conntrack_max);
 
+unsigned int nf_conntrack_mode __read_mostly;
+EXPORT_SYMBOL_GPL(nf_conntrack_mode);
+
 DEFINE_PER_CPU(struct nf_conn, nf_conntrack_untracked);
 EXPORT_PER_CPU_SYMBOL(nf_conntrack_untracked);
 
@@ -875,6 +878,9 @@ void nf_conntrack_free(struct nf_conn *ct)
 {
 	struct net *net = nf_ct_net(ct);
 
+	/* roy: nos node track */
+	nos_track_free(&ct->nos_track);
+
 	/* A freed object has refcnt == 0, that's
 	 * the golden rule for SLAB_DESTROY_BY_RCU
 	 */
@@ -906,6 +912,8 @@ init_conntrack(struct net *net, struct nf_conn *tmpl,
 	struct nf_conntrack_expect *exp = NULL;
 	u16 zone = tmpl ? nf_ct_zone(tmpl) : NF_CT_DEFAULT_ZONE;
 	struct nf_conn_timeout *timeout_ext;
+	/* roy: for traffic control */
+	struct nos_flow_tuple nos_flow_tuple;
 	unsigned int *timeouts;
 
 	if (!nf_ct_invert_tuple(&repl_tuple, tuple, l3proto, l4proto)) {
@@ -928,6 +936,32 @@ init_conntrack(struct net *net, struct nf_conn *tmpl,
 		timeouts = NF_CT_TIMEOUT_EXT_DATA(timeout_ext);
 	else
 		timeouts = l4proto->get_timeouts(net);
+
+	/* roy: nos track init nodes */
+	nos_flow_tuple.ip_src = __be32_to_cpu(tuple->src.u3.ip);
+	nos_flow_tuple.ip_dst = __be32_to_cpu(tuple->dst.u3.ip);
+	nos_flow_tuple.port_src = __be16_to_cpu(tuple->src.u.all);
+	nos_flow_tuple.port_dst = __be16_to_cpu(tuple->dst.u.all);
+	nos_flow_tuple.proto = tuple->dst.protonum;
+	if (skb->dev) {
+		const struct net_device *dev_in;
+		if(nf_ct_net_mode() == UGW_NET_MODE_BRIDGE) {
+			dev_in = skb->nf_bridge ? skb->nf_bridge->physindev : skb->dev;
+		} else {
+			dev_in = skb->dev;
+		}
+		if (strncmp(dev_in->name, "br", 2) == 0 ||
+			strcmp(dev_in->name, "eth0.5") != 0) {
+			//brX,eth0.1-4: lan interface.
+			nos_flow_tuple.inface = NOS_FLOW_DIR_LAN2WAN;
+		} else {
+			//bridge: eth0.5, router: eth0.2-5: WAN
+			nos_flow_tuple.inface = NOS_FLOW_DIR_WAN2LAN;
+		}
+	} else {
+		nos_flow_tuple.inface = NOS_FLOW_DIR_UNKNOWN;
+	}
+	nos_track_alloc(&ct->nos_track, &nos_flow_tuple);
 
 	if (!l4proto->new(ct, skb, dataoff, timeouts)) {
 		nf_conntrack_free(ct);
@@ -1621,6 +1655,12 @@ int nf_conntrack_init_start(void)
 {
 	int max_factor = 8;
 	int i, ret, cpu;
+
+	ret = nos_track_init();
+	if (ret < 0) {
+		printk("%s: nos track init err: %d\n", __FUNCTION__, ret);
+		return ret;
+	}
 
 	for (i = 0; i < CONNTRACK_LOCKS; i++)
 		spin_lock_init(&nf_conntrack_locks[i]);
