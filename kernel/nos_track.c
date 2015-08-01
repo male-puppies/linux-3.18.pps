@@ -5,30 +5,6 @@
 #include <linux/ioport.h>
 #include <linux/slab.h>
 
-#define NOS_USER_DATA_SIZE (NOS_USER_INFO_SIZE - 16)
-#define NOS_FLOW_DATA_SIZE (NOS_FLOW_INFO_SIZE - sizeof(struct nos_flow_tuple) - 16)
-
-struct nos_user_info {
-	uint32_t magic;
-	uint32_t id;
-	uint32_t ip;
-	uint32_t refcnt;
-
-	char data[NOS_USER_DATA_SIZE];
-};
-
-struct nos_flow_info {
-	uint32_t magic;
-	uint32_t id;
-	uint32_t usr_src_id;
-	uint32_t usr_dst_id;
-
-	struct nos_flow_tuple tuple;
-
-	char data[NOS_FLOW_DATA_SIZE];
-};
-
-
 #define NOS_USER_TRACK_HASH_SIZE 	NOS_USER_TRACK_MAX
 
 

@@ -132,6 +132,13 @@ void __init detect_memory_region(phys_t start, phys_t sz_min, phys_t sz_max)
 	void *dm = &detect_magic;
 	phys_t size;
 
+#if defined(CONFIG_SOC_MT7621)
+	//#warning "use mt 7621 mem auto region..."
+	phys_t low_mem_size   = 0x1c000000;
+	phys_t high_mem_start = 0x20000000;
+	phys_t high_mem_size  = 0;
+#endif
+
 	for (size = sz_min; size < sz_max; size <<= 1) {
 		if (!memcmp(dm, dm + size, sizeof(detect_magic)))
 			break;
@@ -143,7 +150,15 @@ void __init detect_memory_region(phys_t start, phys_t sz_min, phys_t sz_max)
 		((unsigned long long) sz_min) / SZ_1M,
 		((unsigned long long) sz_max) / SZ_1M);
 
+#if defined(CONFIG_SOC_MT7621)
+	low_mem_size = (size > low_mem_size)?low_mem_size:size;
+	high_mem_size = size - low_mem_size;
+	add_memory_region(start,low_mem_size, BOOT_MEM_RAM);
+	if(high_mem_size > 0)
+		add_memory_region(high_mem_start,high_mem_size, BOOT_MEM_RAM);
+#else
 	add_memory_region(start, size, BOOT_MEM_RAM);
+#endif
 }
 
 static void __init print_memory_map(void)
@@ -610,6 +625,38 @@ static void __init request_crashkernel(struct resource *res)
 }
 #endif /* !defined(CONFIG_KEXEC)  */
 
+/* Location of the reserved area for nos */
+struct resource nosmem_res = {
+	.name  = "NOS Memory",
+	.start = 0,
+	.end   = 0,
+	.flags = IORESOURCE_BUSY | IORESOURCE_MEM
+};
+
+static void __init reserve_nosmem(void)
+{
+	unsigned long long nosmem_size, nosmem_base;
+	int ret;
+
+	nosmem_base = 16 << 20;
+	nosmem_size = 32 << 20;
+
+	ret = reserve_bootmem(nosmem_base, nosmem_size, BOOTMEM_EXCLUSIVE);
+	if (ret < 0) {
+		printk(KERN_WARNING "NOS reservation failed - "
+		       "memory is in use (0x%lx)\n", (unsigned long)nosmem_base);
+		return;
+	}
+
+	printk(KERN_INFO "Reserving %ldMB of memory at %ldMB for NOS\n",
+	       (unsigned long)(nosmem_size >> 20),
+	       (unsigned long)(nosmem_base >> 20));
+
+	nosmem_res.start = nosmem_base;
+	nosmem_res.end = nosmem_base + nosmem_size - 1;
+	insert_resource(&iomem_resource, &nosmem_res);
+}
+
 static void __init arch_mem_init(char **cmdline_p)
 {
 	struct memblock_region *reg;
@@ -675,6 +722,8 @@ static void __init arch_mem_init(char **cmdline_p)
 				crashk_res.end - crashk_res.start + 1,
 				BOOTMEM_DEFAULT);
 #endif
+	reserve_nosmem();
+
 	device_tree_init();
 	sparse_init();
 	plat_swiotlb_setup();
@@ -685,38 +734,6 @@ static void __init arch_mem_init(char **cmdline_p)
 	for_each_memblock(reserved, reg)
 		if (reg->size != 0)
 			reserve_bootmem(reg->base, reg->size, BOOTMEM_DEFAULT);
-}
-
-/* Location of the reserved area for nos */
-struct resource nosmem_res = {
-	.name  = "NOS Memory",
-	.start = 0,
-	.end   = 0,
-	.flags = IORESOURCE_BUSY | IORESOURCE_MEM
-};
-
-static void __init reserve_nosmem(void)
-{
-	unsigned long long nosmem_size, nosmem_base;
-	int ret;
-
-	nosmem_base = 16 << 20;
-	nosmem_size = 32 << 20;
-
-	ret = reserve_bootmem(nosmem_base, nosmem_size, BOOTMEM_EXCLUSIVE);
-	if (ret < 0) {
-		printk(KERN_WARNING "NOS reservation failed - "
-		       "memory is in use (0x%lx)\n", (unsigned long)nosmem_base);
-		return;
-	}
-
-	printk(KERN_INFO "Reserving %ldMB of memory at %ldMB for NOS\n",
-	       (unsigned long)(nosmem_size >> 20),
-	       (unsigned long)(nosmem_base >> 20));
-
-	nosmem_res.start = nosmem_base;
-	nosmem_res.end = nosmem_base + nosmem_size - 1;
-	insert_resource(&iomem_resource, &nosmem_res);
 }
 
 static void __init resource_init(void)
@@ -768,7 +785,6 @@ static void __init resource_init(void)
 		request_resource(res, &code_resource);
 		request_resource(res, &data_resource);
 		request_crashkernel(res);
-		reserve_nosmem();
 	}
 }
 

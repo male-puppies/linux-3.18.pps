@@ -6,8 +6,11 @@
 #define NOS_USER_TRACK_MAX 			(1 << 19 >> 3)
 #define NOS_FLOW_TRACK_MAX 			(1 << 18 >> 3)
 
-#define NOS_USER_INFO_SIZE			(32)
+#define NOS_USER_INFO_SIZE			(64)
 #define NOS_FLOW_INFO_SIZE			(64)
+
+#define NOS_USER_DATA_SIZE (NOS_USER_INFO_SIZE - 16)
+#define NOS_FLOW_DATA_SIZE (NOS_FLOW_INFO_SIZE - sizeof(struct nos_flow_tuple) - 16)
 
 #define NOS_FLOW_DIR_UNKNOWN		(0)
 #define NOS_FLOW_DIR_LAN2WAN		(1)
@@ -26,9 +29,25 @@ struct nos_flow_tuple {
 	uint8_t  dummy_pad;
 };
 
-struct nos_user_info;
-struct nos_flow_info;
+struct nos_user_info {
+	uint32_t magic;
+	uint32_t id;
+	uint32_t ip;
+	uint32_t refcnt;
 
+	char data[NOS_USER_DATA_SIZE];
+};
+
+struct nos_flow_info {
+	uint32_t magic;
+	uint32_t id;
+	uint32_t usr_src_id;
+	uint32_t usr_dst_id;
+
+	struct nos_flow_tuple tuple;
+
+	char data[NOS_FLOW_DATA_SIZE];
+};
 
 #ifdef __KERNEL__
 
