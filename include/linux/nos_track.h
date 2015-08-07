@@ -75,7 +75,6 @@ struct tbq_flow_track {
 	struct list_head list;
 	uint16_t dummy;
 	uint16_t app_id;
-	uint16_t uname_match;	//mo
 	uint32_t rule_mask;
 	uint8_t weight[32];
 	struct tbq_flow_backlog backlog[2];

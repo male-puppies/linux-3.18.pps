@@ -2354,7 +2354,7 @@ config MIPS_PERF_SHARED_TC_COUNTERS
 
 choice
 	prompt "Timer frequency"
-	default HZ_250
+	default HZ_1000
 	help
 	 Allows the configuration of the timer frequency.
 
