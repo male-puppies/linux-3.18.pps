@@ -6,8 +6,8 @@
 #define NOS_USER_TRACK_MAX 			(1 << 19 >> 3)
 #define NOS_FLOW_TRACK_MAX 			(1 << 18 >> 3)
 
-#define NOS_USER_INFO_SIZE			(64)
-#define NOS_FLOW_INFO_SIZE			(64)
+#define NOS_USER_INFO_SIZE			(256)
+#define NOS_FLOW_INFO_SIZE			(256)
 
 #define NOS_USER_DATA_SIZE (NOS_USER_INFO_SIZE - 16)
 #define NOS_FLOW_DATA_SIZE (NOS_FLOW_INFO_SIZE - sizeof(struct nos_flow_tuple) - 16)
