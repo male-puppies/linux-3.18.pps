@@ -137,17 +137,17 @@ void nos_track_event_register(struct nos_track_event *ev);
 void nos_track_event_unregister(struct nos_track_event *ev);
 
 /* common apis */
-static inline nos_get_flow_info(struct nos_track* nos)
+static inline struct nos_flow_info* nos_get_flow_info(struct nos_track* nos)
 {
 	return nos->flow;
 }
 
-static inline nos_get_user_info(struct nos_track* nos)
+static inline struct nos_user_info* nos_get_user_info(struct nos_track* nos)
 {	
 	return nos->usr_src;
 }
 
-static inline nos_get_peer_info(struct nos_track *nos)
+static inline struct nos_user_info* nos_get_peer_info(struct nos_track *nos)
 {
 	return nos->usr_dst;
 }
