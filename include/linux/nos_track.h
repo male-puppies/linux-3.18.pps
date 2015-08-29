@@ -6,8 +6,8 @@
 #define NOS_USER_TRACK_MAX 			(1 << 19 >> 3)
 #define NOS_FLOW_TRACK_MAX 			(1 << 18 >> 3)
 
-#define NOS_USER_INFO_SIZE			(64)
-#define NOS_FLOW_INFO_SIZE			(64)
+#define NOS_USER_INFO_SIZE			(256)
+#define NOS_FLOW_INFO_SIZE			(256)
 
 #define NOS_USER_DATA_SIZE (NOS_USER_INFO_SIZE - 16)
 #define NOS_FLOW_DATA_SIZE (NOS_FLOW_INFO_SIZE - sizeof(struct nos_flow_tuple) - 16)
@@ -35,8 +35,13 @@ struct nos_user_info {
 	uint32_t ip;
 	uint32_t refcnt;
 
-	char data[NOS_USER_DATA_SIZE];
+	char data[NOS_USER_DATA_SIZE]; //data store for user define struct
 };
+
+static inline void * nos_user_info_priv(struct nos_user_info * user)
+{
+	return (void*)user->data;
+}
 
 struct nos_flow_info {
 	uint32_t magic;
@@ -46,8 +51,13 @@ struct nos_flow_info {
 
 	struct nos_flow_tuple tuple;
 
-	char data[NOS_FLOW_DATA_SIZE];
+	char data[NOS_FLOW_DATA_SIZE]; //data store for user define struct
 };
+
+static inline void * nos_flow_info_priv(struct nos_flow_info* flow)
+{
+	return (void*)flow->data;
+}
 
 #ifdef __KERNEL__
 
@@ -125,6 +135,22 @@ struct nos_flow_track *nos_get_flow_track(struct nos_track *track);
 
 void nos_track_event_register(struct nos_track_event *ev);
 void nos_track_event_unregister(struct nos_track_event *ev);
+
+/* common apis */
+static inline struct nos_flow_info* nos_get_flow_info(struct nos_track* nos)
+{
+	return nos->flow;
+}
+
+static inline struct nos_user_info* nos_get_user_info(struct nos_track* nos)
+{	
+	return nos->usr_src;
+}
+
+static inline struct nos_user_info* nos_get_peer_info(struct nos_track *nos)
+{
+	return nos->usr_dst;
+}
 
 #endif /* __KERNEL__ */
 
